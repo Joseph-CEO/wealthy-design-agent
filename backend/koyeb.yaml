@@ -1,0 +1,51 @@
+name: nairobi-designer-agent
+service:
+  port: 8000
+  dockerfile_path: ./Dockerfile
+  env:
+    - key: APP_NAME
+      value: "Nairobi Designer Agent"
+    - key: DEBUG
+      value: "false"
+    - key: DATABASE_URL
+      value: sqlite+aiosqlite:///./designer_agent.db
+    - key: FRONTEND_URL
+      value: https://your-frontend.vercel.app
+    - key: SCAN_INTERVAL_HOURS
+      value: "6"
+    - key: LEAD_SCORE_THRESHOLD
+      value: "70"
+    - key: SEO_INTERVAL_HOURS
+      value: "168"
+    - key: SEO_BATCH_SIZE
+      value: "50"
+    - key: OPENAI_API_KEY
+      value: ""
+    - key: APIFY_API_KEY
+      value: ""
+    - key: SENDGRID_API_KEY
+      value: ""
+    - key: SENDER_EMAIL
+      value: ""
+    - key: SENDER_NAME
+      value: "Wealthy Design — Graphic Designer"
+    - key: STRIPE_SECRET_KEY
+      value: ""
+    - key: STRIPE_PUBLISHABLE_KEY
+      value: ""
+    - key: STRIPE_WEBHOOK_SECRET
+      value: ""
+    - key: MPESA_CONSUMER_KEY
+      value: ""
+    - key: MPESA_CONSUMER_SECRET
+      value: ""
+    - key: MPESA_SHORTCODE
+      value: "174379"
+    - key: MPESA_PASSKEY
+      value: ""
+    - key: MPESA_ENVIRONMENT
+      value: "sandbox"
+    - key: ADMIN_TOKEN
+      value: "change-me-to-a-secret"
+  health:
+    path: /api/v1/health
