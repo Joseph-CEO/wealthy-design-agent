@@ -148,3 +148,5 @@ async def generate_and_publish_pages(batch_size: int = 50):
         await db.commit()
         logger.info("SEO generator: created %d new pages", created)
         return {"total_combinations": len(prioritized), "created": created, "batch_size": batch_size}
+
+# force new build
