@@ -1,3 +1,9 @@
+import logging
+
+from app.services.google_ads import google_ads
+
+logger = logging.getLogger(__name__)
+
 SERVICES = [
     "logo-design", "brand-identity", "advertising-marketing",
     "web-design-ui", "ux-design", "publication-editorial",
@@ -54,6 +60,41 @@ INDUSTRIES = [
     "Construction", "Energy", "Tourism", "Sports", "Media",
 ]
 
+_volume_cache: dict[str, dict] | None = None
+
+
+def _build_query_phrases() -> list[str]:
+    phrases = []
+    for service in SERVICES[:5]:
+        label = SERVICE_LABELS[service]
+        for county in COUNTIES_PRIORITY[:5]:
+            phrases.append(f"{label} {county} Kenya")
+    return phrases
+
+
+def refresh_search_volume_cache():
+    global _volume_cache
+    phrases = _build_query_phrases()
+    logger.info("Google Ads: fetching search volume for %d phrases", len(phrases))
+    data = google_ads.get_keyword_ideas(phrases)
+    if data:
+        _volume_cache = data
+        logger.info("Google Ads: cached %d keyword volume results", len(data))
+    else:
+        _volume_cache = {}
+
+
+def get_volume_for(service: str, county: str) -> int:
+    if _volume_cache is None:
+        return -1
+    label = SERVICE_LABELS.get(service, "")
+    phrase = f"{label} {county} Kenya"
+    entry = _volume_cache.get(phrase)
+    if entry:
+        return entry.get("avg_monthly_searches", 0)
+    return -1
+
+
 def generate_keyword_matrix():
     matrix = []
     for service in SERVICES:
@@ -70,9 +111,21 @@ def score_opportunity(service: str, county: str, _industry: str) -> int:
     score = 50
     county_rank = COUNTIES_PRIORITY.index(county) if county in COUNTIES_PRIORITY else len(COUNTIES_PRIORITY)
     score += max(0, 50 - county_rank)
-    return min(score, 100)
+
+    volume = get_volume_for(service, county)
+    if volume >= 100:
+        score += 25
+    elif volume >= 50:
+        score += 15
+    elif volume >= 10:
+        score += 5
+    elif volume == 0:
+        score -= 10
+
+    return max(0, min(score, 100))
 
 def prioritize_keywords(matrix: list[dict]) -> list[dict]:
+    refresh_search_volume_cache()
     for item in matrix:
         item["score"] = score_opportunity(item["service"], item["county"], item["industry"])
     matrix.sort(key=lambda x: x["score"], reverse=True)

@@ -56,6 +56,14 @@ class Settings(BaseSettings):
     # Admin
     admin_token: str = ""
 
+    # Google Ads / Keyword Planner
+    google_ads_developer_token: Optional[str] = None
+    google_ads_client_id: Optional[str] = None
+    google_ads_client_secret: Optional[str] = None
+    google_ads_refresh_token: Optional[str] = None
+    google_ads_customer_id: Optional[str] = None
+    google_ads_login_customer_id: Optional[str] = None
+
     # SEO
     seo_interval_hours: int = 168
     seo_batch_size: int = 50
