@@ -32,7 +32,7 @@ class StripeService:
         cancel_url: Optional[str] = None,
     ) -> dict:
         if not self.enabled:
-            return {"error": "Stripe is not configured. Set STRIPE_SECRET_KEY and STRIPE_PUBLISHABLE_KEY."}
+            return {"error": "Payment service is not configured"}
 
         base_url = settings.frontend_url.rstrip("/")
         session = self.stripe.checkout.Session.create(
@@ -62,7 +62,6 @@ class StripeService:
 
     async def verify_webhook(self, payload: bytes, sig_header: str) -> Optional[dict]:
         if not self.stripe or not settings.stripe_webhook_secret:
-            logger.warning("Stripe webhook secret not configured — skipping verification")
             return None
 
         try:

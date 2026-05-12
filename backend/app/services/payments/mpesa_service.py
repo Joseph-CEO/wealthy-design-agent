@@ -75,11 +75,11 @@ class MpesaService:
         transaction_desc: str = "Design Project Payment",
     ) -> dict:
         if not self.enabled:
-            return {"error": "M-Pesa is not configured. Set all MPESA_* environment variables."}
+            return {"error": "Payment service is not configured"}
 
         token = await self._get_access_token()
         if not token:
-            return {"error": "Failed to authenticate with M-Pesa. Check MPESA_CONSUMER_KEY and MPESA_CONSUMER_SECRET."}
+            return {"error": "Payment service authentication failed"}
 
         password, timestamp = self._generate_password()
         callback_url = settings.mpesa_callback_url or f"{settings.frontend_url.rstrip('/')}/api/v1/webhooks/mpesa"
@@ -105,7 +105,7 @@ class MpesaService:
                     timeout=15,
                 )
                 data = resp.json()
-                logger.info("M-Pesa STK Push response: %s", data)
+                logger.debug("M-Pesa STK Push response code: %s", data.get("ResponseCode"))
                 return {
                     "merchant_request_id": data.get("MerchantRequestID"),
                     "checkout_request_id": data.get("CheckoutRequestID"),

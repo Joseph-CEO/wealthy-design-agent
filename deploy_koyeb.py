@@ -1,30 +1,56 @@
 import urllib.request, json
 
-# Check if koyeb CLI is available or API endpoint
-TOKEN = "7da072b7-d808-456c-acd6-270fdb9037e3"
+TOKEN = "v62xbfyuh9kbze2lmsicskjvhwmsdmqcd2xsv9gvz1za50j0yrtwvokasaj660tc"
+API = "https://app.koyeb.com/v1"
+APP_ID = "1db625f1-65ae-4e45-887d-a63c80d9e991"
 
-# Test Koyeb API
-req = urllib.request.Request("https://app.koyeb.com/v1/account")
-req.add_header("Authorization", f"Bearer {TOKEN}")
-try:
-    resp = urllib.request.urlopen(req)
-    print("Koyeb:", resp.read().decode())
-except urllib.error.HTTPError as e:
-    print(f"Koyeb Error {e.code}: {e.read().decode()[:200]}")
-except Exception as e:
-    print(f"Koyeb Error: {e}")
-
-# Test Railway v5 API
-query = '{"query":"{projects{edges{node{id name}}}}"}'
-req2 = urllib.request.Request("https://backboard.railway.app/graphql/v2", data=query.encode(), headers={
+headers = {
     "Authorization": f"Bearer {TOKEN}",
     "Content-Type": "application/json"
-})
+}
+
+service_body = {
+    "app_id": APP_ID,
+    "type": "web",
+    "name": "api",
+    "definition": {
+        "name": "api",
+        "scalings": [
+            {"min": 1, "max": 1}
+        ],
+        "instance_types": [
+            {"min_scale": 1, "max_scale": 1, "type": "nano"}
+        ],
+        "git": {
+            "repository": "github.com/Joseph-CEO/wealthy-design-agent",
+            "branch": "main",
+            "no_deploy_on_push": False,
+            "dockerfile_path": "backend/Dockerfile"
+        },
+        "ports": [
+            {"port": 8000, "protocol": "http"}
+        ],
+        "env": [
+            {"key": "ADMIN_TOKEN", "value": "admin-secret-token-2024"},
+            {"key": "SENDER_EMAIL", "value": "hello@wealthydesign.co.ke"},
+            {"key": "SENDER_NAME", "value": "Wealthy Design Agency"},
+            {"key": "FRONTEND_URL", "value": "https://frontend-iota-rust-82.vercel.app"}
+        ],
+        "regions": ["par"],
+        "health_check": {"path": "/api/v1/health"}
+    }
+}
+
+req = urllib.request.Request(
+    f"{API}/services",
+    data=json.dumps(service_body).encode(),
+    headers=headers,
+    method="POST"
+)
 try:
-    resp2 = urllib.request.urlopen(req2)
-    print("Railway v5:", resp2.read().decode()[:300])
+    resp = urllib.request.urlopen(req)
+    print("Service created successfully!")
+    print(json.dumps(json.loads(resp.read()), indent=2)[:1000])
 except urllib.error.HTTPError as e:
-    print(f"Railway v5 Error {e.code}")
-    print(e.read().decode()[:200])
-except Exception as e:
-    print(f"Railway v5 Error: {e}")
+    body = e.read().decode()
+    print(f"Error {e.code}: {body}")

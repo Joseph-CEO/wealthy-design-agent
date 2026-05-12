@@ -1,12 +1,13 @@
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.models.project import Project
 from app.models.payment import Payment, PaymentGateway, PaymentStatus
+from app.rate_limit import limiter
 from app.services.payments.stripe_service import StripeService
 from app.services.payments.mpesa_service import MpesaService
 
@@ -27,7 +28,8 @@ class MpesaRequest(BaseModel):
 
 
 @router.post("/create-checkout-session")
-async def create_checkout_session(body: CheckoutRequest, db: AsyncSession = Depends(get_db)):
+@limiter.limit("20/minute")
+async def create_checkout_session(request: Request, body: CheckoutRequest, db: AsyncSession = Depends(get_db)):
     project = await db.get(Project, body.project_id)
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
@@ -64,7 +66,8 @@ async def create_checkout_session(body: CheckoutRequest, db: AsyncSession = Depe
 
 
 @router.post("/mpesa-stk-push")
-async def mpesa_stk_push(body: MpesaRequest, db: AsyncSession = Depends(get_db)):
+@limiter.limit("10/minute")
+async def mpesa_stk_push(request: Request, body: MpesaRequest, db: AsyncSession = Depends(get_db)):
     project = await db.get(Project, body.project_id)
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")

@@ -19,8 +19,8 @@ class Settings(BaseSettings):
 
     # App
     app_name: str = "Nairobi Designer Agent"
-    secret_key: str = "change-this-to-a-random-secret-string"
-    debug: bool = True
+    secret_key: str = "d6f8e2a1c4b9f07e3a5d8c2b1e4f6a7d9c0b3e5f7a1c4d8e2f0b6a9c3d7e1f5"
+    debug: bool = False
     host: str = "0.0.0.0"
     port: int = 8000
 

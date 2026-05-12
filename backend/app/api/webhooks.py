@@ -23,13 +23,13 @@ async def stripe_webhook(request: Request, db: AsyncSession = Depends(get_db)):
     stripe = StripeService()
     event = await stripe.verify_webhook(payload, sig_header)
 
-    if event is None and stripe.enabled:
+    if event is None:
         raise HTTPException(status_code=400, detail="Webhook verification failed")
 
-    event_type = event["type"] if event else "checkout.session.completed"
+    event_type = event["type"]
 
     if event_type == "checkout.session.completed":
-        session = event["data"]["object"] if event else json.loads(payload)
+        session = event["data"]["object"]
         session_id = session.get("id") or session.get("object", {})
         project_id = int((session.get("metadata") or {}).get("project_id", 0))
         payment_status = session.get("payment_status", "paid")
@@ -64,11 +64,10 @@ async def mpesa_webhook(request: Request, db: AsyncSession = Depends(get_db)):
     except Exception:
         body = {}
 
-    logger.info("M-Pesa callback received: %s", json.dumps(body, default=str)[:500])
-
     stk_callback = body.get("Body", {}).get("stkCallback", {})
-    result_code = stk_callback.get("ResultCode")
     checkout_request_id = stk_callback.get("CheckoutRequestID")
+    logger.debug("M-Pesa callback for checkout: %s", checkout_request_id)
+    result_code = stk_callback.get("ResultCode")
     result_desc = stk_callback.get("ResultDesc", "")
 
     if not checkout_request_id:

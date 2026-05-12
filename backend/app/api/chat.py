@@ -2,11 +2,12 @@ import json
 import logging
 from uuid import uuid4
 
-from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect, HTTPException
+from fastapi import APIRouter, Depends, Request, WebSocket, WebSocketDisconnect, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
+from app.rate_limit import limiter
 from app.services.chatbot import ChatbotService
 
 logger = logging.getLogger(__name__)
@@ -27,7 +28,8 @@ class ChatResponse(BaseModel):
 
 
 @router.post("")
-async def chat_message(body: ChatRequest, db: AsyncSession = Depends(get_db)):
+@limiter.limit("30/minute")
+async def chat_message(request: Request, body: ChatRequest, db: AsyncSession = Depends(get_db)):
     session_id = body.session_id or str(uuid4())
     reply = await chatbot.process_message(db, session_id, body.message, body.client_email)
     return ChatResponse(response=reply, session_id=session_id)

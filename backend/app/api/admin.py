@@ -1,6 +1,6 @@
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException, Header, Query
+from fastapi import APIRouter, Depends, HTTPException, Header, Query, Request
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -11,6 +11,7 @@ from app.models.project import Project, ProjectStatus
 from app.models.payment import Payment, PaymentStatus
 from app.models.portfolio import PortfolioItem
 from app.models.scan_log import ScanLog
+from app.rate_limit import limiter
 from app.services.seo_generator import generate_and_publish_pages
 
 logger = logging.getLogger(__name__)
@@ -108,7 +109,9 @@ async def list_scan_logs(
 
 
 @router.post("/generate-seo-pages")
+@limiter.limit("5/minute")
 async def trigger_seo_generation(
+    request: Request,
     _=Depends(require_admin),
 ):
     """Manually trigger SEO page generation."""

@@ -3,11 +3,15 @@ import os
 import shutil
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
 
 from app.config import settings
 from app.database import init_db
+from app.rate_limit import limiter
 from app.scheduler import start_scheduler, stop_scheduler
 from app.api.router import router
 from app.api.leads import router as leads_router
@@ -20,7 +24,7 @@ from app.api.admin import router as admin_router
 from app.api.seo import router as seo_router
 
 logging.basicConfig(
-    level=logging.INFO if settings.debug else logging.WARNING,
+    level=logging.WARNING,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
 logger = logging.getLogger(__name__)
@@ -52,17 +56,29 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    logger.error("Unhandled exception: %s", exc, exc_info=True)
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "Internal server error"},
+    )
+
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         settings.frontend_url,
         "https://localhost:3000",
         "https://localhost:3001",
-        "https://*.vercel.app",
     ],
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type", "Stripe-Signature"],
 )
 
 # ── Routers ────────────────────────────────────────────

@@ -1,11 +1,12 @@
 import logging
 from typing import Optional
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.models.lead import Lead, LeadStatus
+from app.rate_limit import limiter
 from app.services.qualification import qualify_lead
 from app.services.discovery.orchestrator import DiscoveryOrchestrator
 from app.services.outreach import OutreachSender
@@ -64,7 +65,8 @@ async def delete_lead(lead_id: int, db: AsyncSession = Depends(get_db)):
 
 
 @router.post("/{lead_id}/qualify")
-async def qualify_lead_endpoint(lead_id: int, db: AsyncSession = Depends(get_db)):
+@limiter.limit("10/minute")
+async def qualify_lead_endpoint(request: Request, lead_id: int, db: AsyncSession = Depends(get_db)):
     lead = await db.get(Lead, lead_id)
     if not lead:
         raise HTTPException(status_code=404, detail="Lead not found")
@@ -83,7 +85,8 @@ async def qualify_lead_endpoint(lead_id: int, db: AsyncSession = Depends(get_db)
 
 
 @router.post("/{lead_id}/contact")
-async def contact_lead(lead_id: int, db: AsyncSession = Depends(get_db)):
+@limiter.limit("10/minute")
+async def contact_lead(request: Request, lead_id: int, db: AsyncSession = Depends(get_db)):
     """Send intro email and mark lead as contacted."""
     lead = await db.get(Lead, lead_id)
     if not lead:
@@ -113,7 +116,8 @@ async def contact_lead(lead_id: int, db: AsyncSession = Depends(get_db)):
 
 
 @router.post("/scan")
-async def trigger_scan(db: AsyncSession = Depends(get_db)):
+@limiter.limit("3/minute")
+async def trigger_scan(request: Request, db: AsyncSession = Depends(get_db)):
     """Manually trigger a discovery scan."""
     orchestrator = DiscoveryOrchestrator(db)
     summary = await orchestrator.run_full_scan()
@@ -121,7 +125,8 @@ async def trigger_scan(db: AsyncSession = Depends(get_db)):
 
 
 @router.post("/qualify-all")
-async def qualify_all_new_leads(db: AsyncSession = Depends(get_db)):
+@limiter.limit("5/minute")
+async def qualify_all_new_leads(request: Request, db: AsyncSession = Depends(get_db)):
     """Run qualification on all new/unscored leads."""
     result = await db.execute(
         select(Lead).where(Lead.status == LeadStatus.new)
@@ -138,7 +143,8 @@ async def qualify_all_new_leads(db: AsyncSession = Depends(get_db)):
 
 
 @router.post("/outreach-qualified")
-async def outreach_qualified_leads(db: AsyncSession = Depends(get_db)):
+@limiter.limit("3/minute")
+async def outreach_qualified_leads(request: Request, db: AsyncSession = Depends(get_db)):
     """Send intro emails to all qualified leads that haven't been contacted yet."""
     result = await db.execute(
         select(Lead).where(
@@ -167,7 +173,8 @@ async def outreach_qualified_leads(db: AsyncSession = Depends(get_db)):
 
 
 @router.post("/outreach-followup")
-async def send_follow_ups(db: AsyncSession = Depends(get_db)):
+@limiter.limit("3/minute")
+async def send_follow_ups(request: Request, db: AsyncSession = Depends(get_db)):
     """Send follow-up emails to contacted leads (3+ days since contact)."""
     from datetime import datetime, timedelta, timezone
 
