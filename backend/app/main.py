@@ -1,4 +1,6 @@
 import logging
+import os
+import shutil
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -27,11 +29,20 @@ logger = logging.getLogger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("Starting %s...", settings.app_name)
+    if os.environ.get("VERCEL"):
+        tmp_db = "/tmp/designer_agent.db"
+        if not os.path.exists(tmp_db):
+            src = os.path.join(os.path.dirname(__file__), "..", "designer_agent.db")
+            if os.path.exists(src):
+                shutil.copy2(src, tmp_db)
+                logger.info("Copied DB to /tmp for Vercel")
     await init_db()
     logger.info("Database initialized.")
-    start_scheduler()
+    if not os.environ.get("VERCEL"):
+        start_scheduler()
     yield
-    stop_scheduler()
+    if not os.environ.get("VERCEL"):
+        stop_scheduler()
     logger.info("%s shut down.", settings.app_name)
 
 
@@ -46,6 +57,7 @@ app.add_middleware(
     allow_origins=[
         settings.frontend_url,
         "https://localhost:3000",
+        "https://localhost:3001",
         "https://*.vercel.app",
     ],
     allow_credentials=True,

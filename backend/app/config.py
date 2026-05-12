@@ -1,5 +1,13 @@
+import os
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from typing import Optional
+
+
+def get_database_url() -> str:
+    url = os.environ.get("DATABASE_URL", "sqlite+aiosqlite:///./designer_agent.db")
+    if os.environ.get("VERCEL"):
+        url = "sqlite+aiosqlite:////tmp/designer_agent.db"
+    return url
 
 
 class Settings(BaseSettings):
@@ -17,7 +25,7 @@ class Settings(BaseSettings):
     port: int = 8000
 
     # Database
-    database_url: str = "sqlite+aiosqlite:///./designer_agent.db"
+    database_url: str = get_database_url()
 
     # OpenAI
     openai_api_key: Optional[str] = None
