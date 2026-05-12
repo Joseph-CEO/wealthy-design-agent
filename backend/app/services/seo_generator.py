@@ -119,7 +119,9 @@ async def generate_and_publish_pages(batch_size: int = 50):
         existing_slugs = {row[0] for row in existing.fetchall()}
 
         created = 0
-        for item in prioritized[:batch_size]:
+        for item in prioritized:
+            if created >= batch_size:
+                break
             page_data = generate_page_data(item["service"], item["county"], item["industry"])
             if page_data["slug"] in existing_slugs:
                 continue
