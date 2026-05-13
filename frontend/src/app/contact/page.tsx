@@ -14,10 +14,14 @@ export default function ContactPage() {
           </p>
         </div>
         <ContactForm />
-        <div className="mt-16 grid grid-cols-1 sm:grid-cols-3 gap-8 text-center text-sm text-zinc-500">
+        <div className="mt-16 grid grid-cols-1 sm:grid-cols-4 gap-8 text-center text-sm text-zinc-500">
           <div>
             <div className="font-semibold text-zinc-900 mb-1">Email</div>
-            hello@designer.ke
+            wealthboxagency@outlook.com
+          </div>
+          <div>
+            <div className="font-semibold text-zinc-900 mb-1">Phone</div>
+            +254 705 465 464
           </div>
           <div>
             <div className="font-semibold text-zinc-900 mb-1">Response Time</div>

@@ -21,8 +21,13 @@ export default function Navbar() {
     <nav className="sticky top-0 z-50 bg-white/90 backdrop-blur border-b border-zinc-100">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16 items-center">
-          <Link href="/" className="text-xl font-bold tracking-tight text-zinc-900">
-            Designer<span className="text-amber-500">.</span>
+          <Link href="/" className="flex flex-col">
+            <span className="text-xl font-bold tracking-tight text-zinc-900">
+              Wealthbox<span className="text-amber-500">.</span>
+            </span>
+            <span className="text-[10px] text-zinc-400 tracking-wider -mt-1">
+              by Seven Integrated
+            </span>
           </Link>
           <div className="hidden sm:flex gap-8">
             {links.map((l) => (

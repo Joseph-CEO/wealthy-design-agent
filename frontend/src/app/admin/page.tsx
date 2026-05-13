@@ -63,12 +63,26 @@ export default function AdminPage() {
     setLoading(true);
     try {
       const [s, p, pr, l] = await Promise.all([
-        apiFetch<AdminStats>("/admin/stats").catch(() => { setShowAuth(true); setAuthError("Backend is waking up — try again in a moment."); return null; }),
+        (async () => {
+          try {
+            return await apiFetch<AdminStats>("/admin/stats");
+          } catch {
+            setAuthError("Backend is sleeping — waking it up...");
+            await new Promise(r => setTimeout(r, 3000));
+            try {
+              return await apiFetch<AdminStats>("/admin/stats");
+            } catch {
+              setShowAuth(true);
+              setAuthError("Backend is not responding — try again in a moment.");
+              return null;
+            }
+          }
+        })(),
         apiFetch<{ items: PortfolioItem[] }>("/portfolio?limit=200").then(r => r.items).catch(() => []),
         apiFetch<Project[]>("/projects").catch(() => []),
         apiFetch<{ leads: Lead[] }>("/leads?limit=200").then(r => r.leads).catch(() => []),
       ]);
-      if (s) { setStats(s); setShowAuth(false); }
+      if (s) { setStats(s); setShowAuth(false); setAuthError(""); }
       setPortfolio(p);
       setProjects(pr);
       setLeads(l);
@@ -188,7 +202,11 @@ export default function AdminPage() {
         ))}
       </div>
 
-      {loading && <p className="text-zinc-400 text-center py-12">Loading...</p>}
+      {loading && (
+        <div className="text-center py-12">
+          <p className="text-zinc-400">{authError || "Loading..."}</p>
+        </div>
+      )}
 
       {!loading && tab === "dashboard" && stats && (
         <div className="space-y-8">

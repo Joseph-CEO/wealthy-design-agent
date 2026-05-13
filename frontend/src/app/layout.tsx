@@ -3,6 +3,7 @@ import "./globals.css";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import ChatBot from "@/components/ChatBot";
+import WakeUp from "@/components/WakeUp";
 
 export const metadata: Metadata = {
   title: "Designer — Graphic Design Portfolio | Nairobi",
@@ -27,6 +28,7 @@ export default function RootLayout({
         <main className="flex-1">{children}</main>
         <Footer />
         <ChatBot />
+        <WakeUp />
       </body>
     </html>
   );

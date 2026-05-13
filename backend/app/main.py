@@ -73,6 +73,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         settings.frontend_url,
+        "https://frontend-iota-rust-82.vercel.app",
         "https://localhost:3000",
         "https://localhost:3001",
     ],

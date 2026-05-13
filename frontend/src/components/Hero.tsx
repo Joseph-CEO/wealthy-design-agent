@@ -6,12 +6,12 @@ export default function Hero() {
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-24 sm:py-32">
         <div className="max-w-3xl">
           <p className="text-amber-600 font-medium text-sm tracking-widest uppercase mb-4">
-            Nairobi-Based Graphic Designer
+            Wealthbox Design Agency
           </p>
           <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-zinc-900 leading-tight">
-            I create visual identities
+            We design distinctive visual
             <br />
-            that make an impact.
+            identities that resonate and inspire.
           </h1>
           <p className="mt-6 text-lg text-zinc-600 max-w-xl">
             Logo design, book layouts &amp; covers, branding, packaging, signboards,
