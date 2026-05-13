@@ -49,6 +49,7 @@ export default function AdminPage() {
   const [scans, setScans] = useState<any[]>([]);
   const [authToken, setAuthToken] = useState("");
   const [showAuth, setShowAuth] = useState(false);
+  const [authError, setAuthError] = useState("");
   const [loading, setLoading] = useState(false);
   const [editingPortfolio, setEditingPortfolio] = useState<Partial<PortfolioItem> | null>(null);
   const [editingProject, setEditingProject] = useState<Partial<Project> | null>(null);
@@ -62,7 +63,7 @@ export default function AdminPage() {
     setLoading(true);
     try {
       const [s, p, pr, l] = await Promise.all([
-        apiFetch<AdminStats>("/admin/stats").catch(() => { setShowAuth(true); return null; }),
+        apiFetch<AdminStats>("/admin/stats").catch(() => { setShowAuth(true); setAuthError("Backend is waking up — try again in a moment."); return null; }),
         apiFetch<{ items: PortfolioItem[] }>("/portfolio?limit=200").then(r => r.items).catch(() => []),
         apiFetch<Project[]>("/projects").catch(() => []),
         apiFetch<{ leads: Lead[] }>("/leads?limit=200").then(r => r.leads).catch(() => []),
@@ -88,6 +89,7 @@ export default function AdminPage() {
 
   async function handleAuth(e: FormEvent) {
     e.preventDefault();
+    setAuthError("");
     sessionStorage.setItem("admin_token", authToken);
     setShowAuth(false);
     await loadData();
@@ -146,6 +148,7 @@ export default function AdminPage() {
           <button type="submit" className="w-full h-12 rounded-full bg-zinc-900 text-white font-medium hover:bg-zinc-800">
             Login
           </button>
+          {authError && <p className="text-red-500 text-sm text-center">{authError}</p>}
         </form>
       </div>
     );

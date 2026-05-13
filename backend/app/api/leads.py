@@ -1,11 +1,12 @@
 import logging
 from typing import Optional
+from pydantic import BaseModel
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
-from app.models.lead import Lead, LeadStatus
+from app.models.lead import Lead, LeadStatus, ServiceType
 from app.rate_limit import limiter
 from app.services.qualification import qualify_lead
 from app.services.discovery.orchestrator import DiscoveryOrchestrator
@@ -13,6 +14,31 @@ from app.services.outreach import OutreachSender
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/leads", tags=["Leads"])
+
+
+class ContactFormData(BaseModel):
+    name: str
+    email: str
+    service_type: str
+    budget: str
+    description: str
+
+
+@router.post("/contact")
+async def contact_form(body: ContactFormData, db: AsyncSession = Depends(get_db)):
+    lead = Lead(
+        source="contact_form",
+        title=body.description[:100],
+        description=body.description,
+        client_name=body.name,
+        client_email=body.email,
+        service_type=ServiceType(body.service_type.lower().replace(" ", "_")),
+        status=LeadStatus.new,
+    )
+    db.add(lead)
+    await db.commit()
+    await db.refresh(lead)
+    return {"status": "ok", "id": lead.id}
 
 
 @router.get("")

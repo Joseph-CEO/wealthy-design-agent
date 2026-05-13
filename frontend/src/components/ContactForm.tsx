@@ -35,13 +35,15 @@ export default function ContactForm() {
   });
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    setError("");
     try {
       const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1"}/contact`,
+        `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1"}/leads/contact`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -51,7 +53,12 @@ export default function ContactForm() {
       if (res.ok) {
         setSubmitted(true);
         setForm({ name: "", email: "", service_type: "", budget: "", description: "" });
+      } else {
+        const text = await res.text().catch(() => "");
+        setError(text || `Server error (${res.status})`);
       }
+    } catch (err) {
+      setError("Network error — please check your connection and try again.");
     } finally {
       setLoading(false);
     }
@@ -164,6 +171,7 @@ export default function ContactForm() {
       >
         {loading ? "Sending..." : "Send Request"}
       </button>
+      {error && <p className="text-red-500 text-sm text-center">{error}</p>}
     </form>
   );
 }
