@@ -9,7 +9,7 @@ export default function ContactPage() {
             Start Your Project
           </h1>
           <p className="mt-4 text-zinc-600 max-w-xl mx-auto">
-            Tell me about your project and I&apos;ll get back to you within 24 hours
+            Tell me about your project and I&apos;ll get back to you within 1 hour
             with a personalized quote and timeline.
           </p>
         </div>
@@ -25,7 +25,7 @@ export default function ContactPage() {
           </div>
           <div>
             <div className="font-semibold text-zinc-900 mb-1">Response Time</div>
-            Within 24 hours
+            Within 1 hour
           </div>
           <div>
             <div className="font-semibold text-zinc-900 mb-1">Payments</div>

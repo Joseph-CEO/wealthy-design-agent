@@ -75,7 +75,7 @@ export default function ContactForm() {
         <div className="text-4xl mb-4">✓</div>
         <h3 className="text-xl font-semibold text-zinc-900">Thank You!</h3>
         <p className="text-zinc-600 mt-2">
-          I&apos;ll review your project and get back to you within 24 hours.
+          I&apos;ll review your project and get back to you within 1 hour.
         </p>
         <button
           onClick={() => setSubmitted(false)}
