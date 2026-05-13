@@ -41,14 +41,15 @@ export default function ContactForm() {
     e.preventDefault();
     setLoading(true);
     setError("");
-    const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
+    const apiBase = "https://api-production-8de3.up.railway.app/api/v1";
     for (let attempt = 0; attempt < 3; attempt++) {
       if (attempt > 0) {
         setError("Backend is waking up, retrying...");
         await new Promise(r => setTimeout(r, 8000));
       }
       try {
-        const healthRes = await fetch(`${apiBase}/health`);
+        const healthUrl = `${apiBase}/health`;
+        const healthRes = await fetch(healthUrl);
         if (!healthRes.ok) continue;
         const res = await fetch(`${apiBase}/leads/contact`, {
           method: "POST",
@@ -62,10 +63,9 @@ export default function ContactForm() {
           return;
         }
       } catch {
-        /* network error — will retry */
+        if (attempt === 2) setError("Network error — please check your connection and try again.");
       }
     }
-    setError("Network error — please check your connection and try again.");
     setLoading(false);
   };
 

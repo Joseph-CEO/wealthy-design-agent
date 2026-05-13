@@ -3,7 +3,7 @@
 import type { FormEvent } from "react";
 import { useState, useEffect, useCallback } from "react";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
+const API_BASE = "https://api-production-8de3.up.railway.app/api/v1";
 
 interface AdminStats {
   leads: { total: number; new: number; qualified: number; converted: number };
