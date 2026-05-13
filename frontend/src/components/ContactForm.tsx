@@ -41,33 +41,31 @@ export default function ContactForm() {
     e.preventDefault();
     setLoading(true);
     setError("");
-    const apiUrl = `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1"}/leads/contact`;
-    const doFetch = (): Promise<Response> =>
-      fetch(apiUrl, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
-      });
-    for (let attempt = 0; attempt < 2; attempt++) {
+    const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
+    for (let attempt = 0; attempt < 3; attempt++) {
+      if (attempt > 0) {
+        setError("Backend is waking up, retrying...");
+        await new Promise(r => setTimeout(r, 8000));
+      }
       try {
-        const res = await doFetch();
+        const healthRes = await fetch(`${apiBase}/health`);
+        if (!healthRes.ok) continue;
+        const res = await fetch(`${apiBase}/leads/contact`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(form),
+        });
         if (res.ok) {
           setSubmitted(true);
           setForm({ name: "", email: "", service_type: "", budget: "", description: "" });
           setLoading(false);
           return;
-        } else if (attempt === 1) {
-          const text = await res.text().catch(() => "");
-          setError(text || `Server error (${res.status})`);
         }
       } catch {
-        if (attempt === 1) setError("Network error — please check your connection and try again.");
-      }
-      if (attempt === 0) {
-        setError("Backend is waking up, retrying...");
-        await new Promise(r => setTimeout(r, 3000));
+        /* network error — will retry */
       }
     }
+    setError("Network error — please check your connection and try again.");
     setLoading(false);
   };
 

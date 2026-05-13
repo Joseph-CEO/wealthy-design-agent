@@ -68,7 +68,7 @@ export default function AdminPage() {
             return await apiFetch<AdminStats>("/admin/stats");
           } catch {
             setAuthError("Backend is sleeping — waking it up...");
-            await new Promise(r => setTimeout(r, 3000));
+            await new Promise(r => setTimeout(r, 8000));
             try {
               return await apiFetch<AdminStats>("/admin/stats");
             } catch {
