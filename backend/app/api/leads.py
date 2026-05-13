@@ -38,6 +38,22 @@ async def contact_form(body: ContactFormData, db: AsyncSession = Depends(get_db)
     db.add(lead)
     await db.commit()
     await db.refresh(lead)
+
+    sender = OutreachSender()
+    await sender._send(
+        to_email="wealthboxagency@outlook.com",
+        subject=f"New quote request from {body.name}",
+        html=f"<p><strong>Name:</strong> {body.name}</p><p><strong>Email:</strong> {body.email}</p><p><strong>Service:</strong> {body.service_type}</p><p><strong>Budget:</strong> {body.budget}</p><p><strong>Description:</strong> {body.description}</p><p><a href='https://frontend-iota-rust-82.vercel.app/admin'>View in admin</a></p>",
+        plain=f"New quote request from {body.name}\n\nName: {body.name}\nEmail: {body.email}\nService: {body.service_type}\nBudget: {body.budget}\nDescription: {body.description}\n\nAdmin: https://frontend-iota-rust-82.vercel.app/admin",
+    )
+    if body.email:
+        await sender._send(
+            to_email=body.email,
+            subject="Thank you for your quote request",
+            html=f"<p>Hi {body.name},</p><p>Thank you for reaching out! I've received your quote request and will get back to you within 1 hour.</p><p>Here's a summary of what you sent:</p><ul><li><strong>Service:</strong> {body.service_type}</li><li><strong>Budget:</strong> {body.budget}</li><li><strong>Description:</strong> {body.description}</li></ul><p>Best regards,<br>Joseph</p>",
+            plain=f"Hi {body.name},\n\nThank you for reaching out! I've received your quote request and will get back to you within 1 hour.\n\nSummary:\nService: {body.service_type}\nBudget: {body.budget}\nDescription: {body.description}\n\nBest regards,\nJoseph",
+        )
+
     return {"status": "ok", "id": lead.id}
 
 
