@@ -54,17 +54,16 @@ class MpesaService:
                 resp.raise_for_status()
                 data = resp.json()
                 self._access_token = data.get("access_token")
-                self._token_expires_at = now + (data.get("expires_in", 3600) - 60)
+                self._token_expires_at = now + (int(data.get("expires_in", 3600)) - 60)
                 return self._access_token
             except Exception as e:
                 logger.error("M-Pesa auth failed: %s", e)
                 return None
 
     def _generate_password(self) -> tuple[str, str]:
-        import hashlib
         timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
         raw = f"{settings.mpesa_shortcode}{settings.mpesa_passkey}{timestamp}"
-        password = base64.b64encode(hashlib.sha256(raw.encode()).hexdigest().encode()).decode()
+        password = base64.b64encode(raw.encode()).decode()
         return password, timestamp
 
     async def stk_push(
