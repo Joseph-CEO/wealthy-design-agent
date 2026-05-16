@@ -5,7 +5,7 @@ from app.database import Base
 
 
 class PaymentGateway(str, enum.Enum):
-    stripe = "stripe"
+    pesapal = "pesapal"
     mpesa = "mpesa"
 
 

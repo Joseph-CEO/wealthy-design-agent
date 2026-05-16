@@ -184,8 +184,8 @@ export const api = {
     request<Project>(`/projects/${id}`, { method: "PUT", body: JSON.stringify(data) }),
 
   // Payments
-  createCheckoutSession: (data: { project_id: number; success_url?: string; cancel_url?: string }) =>
-    request<{ session_id: string; url: string; publishable_key: string }>("/payments/create-checkout-session", {
+  createPesapalOrder: (data: { project_id: number; client_first_name?: string; client_last_name?: string; client_phone?: string }) =>
+    request<{ order_tracking_id: string; redirect_url: string }>("/payments/create-pesapal-order", {
       method: "POST",
       body: JSON.stringify(data),
     }),

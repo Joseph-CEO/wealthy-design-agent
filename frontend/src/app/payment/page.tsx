@@ -7,38 +7,41 @@ const API_BASE = "https://api-production-8de3.up.railway.app/api/v1";
 
 export default function PaymentPage() {
   const [projectId, setProjectId] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<{ type: "stripe" | "mpesa"; url?: string; message: string } | null>(null);
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [phone, setPhone] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState<{ type: "pesapal" | "mpesa"; message: string } | null>(null);
 
-  async function payStripe(e: FormEvent) {
+  async function payPesapal(e: FormEvent) {
     e.preventDefault();
     if (!projectId) return;
     setLoading(true);
     setResult(null);
     try {
-      const res = await fetch(`${API_BASE}/payments/create-checkout-session`, {
+      const res = await fetch(`${API_BASE}/payments/create-pesapal-order`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           project_id: parseInt(projectId),
-          success_url: window.location.origin + "/payment/success",
-          cancel_url: window.location.origin + "/payment/cancel",
+          client_first_name: firstName,
+          client_last_name: lastName,
+          client_phone: phone,
         }),
       });
       if (!res.ok) {
         const err = await res.text();
-        setResult({ type: "stripe", message: `Error: ${err}` });
+        setResult({ type: "pesapal", message: `Error: ${err}` });
         return;
       }
       const data = await res.json();
-      if (data.url) {
-        window.location.href = data.url;
+      if (data.redirect_url) {
+        window.location.href = data.redirect_url;
       } else {
-        setResult({ type: "stripe", message: "No checkout URL returned" });
+        setResult({ type: "pesapal", message: "No payment URL returned" });
       }
     } catch (err: any) {
-      setResult({ type: "stripe", message: `Error: ${err.message}` });
+      setResult({ type: "pesapal", message: `Error: ${err.message}` });
     } finally {
       setLoading(false);
     }
@@ -90,15 +93,31 @@ export default function PaymentPage() {
         </div>
 
         <div className="grid grid-cols-2 gap-4 mb-6">
-          <form onSubmit={payStripe}>
-            <button
-              type="submit"
-              disabled={loading || !projectId}
-              className="w-full h-12 rounded-full bg-indigo-600 text-white font-medium hover:bg-indigo-700 disabled:opacity-50 transition-colors"
-            >
-              {loading ? "..." : "Pay with Card"}
-            </button>
-          </form>
+          <div className="space-y-2">
+            <input
+              type="text"
+              placeholder="First name"
+              value={firstName}
+              onChange={(e) => setFirstName(e.target.value)}
+              className="w-full px-3 py-2 rounded-lg border border-zinc-300 text-sm focus:border-amber-500 outline-none"
+            />
+            <input
+              type="text"
+              placeholder="Last name"
+              value={lastName}
+              onChange={(e) => setLastName(e.target.value)}
+              className="w-full px-3 py-2 rounded-lg border border-zinc-300 text-sm focus:border-amber-500 outline-none"
+            />
+            <form onSubmit={payPesapal}>
+              <button
+                type="submit"
+                disabled={loading || !projectId}
+                className="w-full h-12 rounded-full bg-indigo-600 text-white font-medium hover:bg-indigo-700 disabled:opacity-50 transition-colors"
+              >
+                {loading ? "..." : "Pay with Card / PesaPal"}
+              </button>
+            </form>
+          </div>
           <div className="space-y-2">
             <input
               type="tel"
@@ -128,7 +147,7 @@ export default function PaymentPage() {
         )}
 
         <p className="text-xs text-zinc-400 mt-8 text-center">
-          Secured by Stripe and Safaricom M-Pesa.
+          Secured by PesaPal and Safaricom M-Pesa.
         </p>
       </div>
     </section>

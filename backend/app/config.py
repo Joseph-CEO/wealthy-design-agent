@@ -40,10 +40,11 @@ class Settings(BaseSettings):
     sender_email: Optional[str] = None
     sender_name: str = "Your Name — Graphic Designer"
 
-    # Stripe
-    stripe_secret_key: Optional[str] = None
-    stripe_publishable_key: Optional[str] = None
-    stripe_webhook_secret: Optional[str] = None
+    # PesaPal
+    pesapal_consumer_key: Optional[str] = None
+    pesapal_consumer_secret: Optional[str] = None
+    pesapal_environment: str = "sandbox"
+    pesapal_ipn_id: Optional[str] = None
 
     # M-Pesa
     mpesa_consumer_key: Optional[str] = None

@@ -8,17 +8,19 @@ from app.database import get_db
 from app.models.project import Project
 from app.models.payment import Payment, PaymentGateway, PaymentStatus
 from app.rate_limit import limiter
-from app.services.payments.stripe_service import StripeService
+from app.config import settings
+from app.services.payments.pesapal_service import PesapalService
 from app.services.payments.mpesa_service import MpesaService
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/payments", tags=["Payments"])
 
 
-class CheckoutRequest(BaseModel):
+class PesapalRequest(BaseModel):
     project_id: int
-    success_url: str | None = None
-    cancel_url: str | None = None
+    client_first_name: str = ""
+    client_last_name: str = ""
+    client_phone: str = ""
 
 
 class MpesaRequest(BaseModel):
@@ -27,34 +29,50 @@ class MpesaRequest(BaseModel):
     amount: float | None = None
 
 
-@router.post("/create-checkout-session")
+@router.post("/create-pesapal-order")
 @limiter.limit("20/minute")
-async def create_checkout_session(request: Request, body: CheckoutRequest, db: AsyncSession = Depends(get_db)):
+async def create_pesapal_order(request: Request, body: PesapalRequest, db: AsyncSession = Depends(get_db)):
     project = await db.get(Project, body.project_id)
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
     if not project.quote_amount or project.quote_amount <= 0:
         raise HTTPException(status_code=400, detail="Project has no quote amount set")
 
-    stripe = StripeService()
-    result = await stripe.create_checkout_session(
+    pesapal = PesapalService()
+    if not pesapal.enabled:
+        raise HTTPException(status_code=503, detail="PesaPal is not configured")
+
+    ipn_id = settings.pesapal_ipn_id
+    if not ipn_id:
+        ipn_id = await pesapal.register_ipn(
+            ipn_url="https://api-production-8de3.up.railway.app/api/v1/webhooks/pesapal"
+        )
+        if not ipn_id:
+            raise HTTPException(status_code=503, detail="Failed to register PesaPal IPN URL")
+
+    callback_url = f"{settings.frontend_url.rstrip('/')}/payment/success?order_tracking_id="
+    result = await pesapal.submit_order(
         project_id=project.id,
         amount=project.quote_amount,
-        currency=project.currency,
-        client_email=project.client_email,
-        success_url=body.success_url,
-        cancel_url=body.cancel_url,
+        currency=project.currency if project.currency in ("KES", "USD", "EUR", "GBP") else "KES",
+        description=f"Design Project #{project.id}",
+        client_email=project.client_email or "",
+        client_phone=body.client_phone,
+        client_first_name=body.client_first_name,
+        client_last_name=body.client_last_name,
+        callback_url=callback_url,
+        notification_id=ipn_id,
     )
 
     if "error" in result:
-        raise HTTPException(status_code=503, detail=result["error"])
+        raise HTTPException(status_code=502, detail=result["error"])
 
     payment = Payment(
         project_id=project.id,
         amount=project.quote_amount,
         currency=project.currency,
-        gateway=PaymentGateway.stripe,
-        gateway_payment_id=result["session_id"],
+        gateway=PaymentGateway.pesapal,
+        gateway_payment_id=result.get("order_tracking_id"),
         gateway_status="pending",
         status=PaymentStatus.pending,
         client_email=project.client_email,

@@ -9,52 +9,72 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import get_db
 from app.models.payment import Payment, PaymentGateway, PaymentStatus
 from app.models.project import Project, ProjectStatus
-from app.services.payments.stripe_service import StripeService
+from app.services.payments.pesapal_service import PesapalService
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/webhooks", tags=["Webhooks"])
 
 
-@router.post("/stripe")
-async def stripe_webhook(request: Request, db: AsyncSession = Depends(get_db)):
-    payload = await request.body()
-    sig_header = request.headers.get("stripe-signature", "")
+@router.post("/pesapal")
+async def pesapal_ipn(request: Request, db: AsyncSession = Depends(get_db)):
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
 
-    stripe = StripeService()
-    event = await stripe.verify_webhook(payload, sig_header)
+    order_tracking_id = body.get("OrderTrackingId")
+    merchant_reference = body.get("OrderMerchantReference")
+    notification_type = body.get("OrderNotificationType")
 
-    if event is None:
-        raise HTTPException(status_code=400, detail="Webhook verification failed")
+    logger.debug("PesaPal IPN: tracking=%s ref=%s type=%s", order_tracking_id, merchant_reference, notification_type)
 
-    event_type = event["type"]
+    if not order_tracking_id:
+        return {"status": 200}
 
-    if event_type == "checkout.session.completed":
-        session = event["data"]["object"]
-        session_id = session.get("id") or session.get("object", {})
-        project_id = int((session.get("metadata") or {}).get("project_id", 0))
-        payment_status = session.get("payment_status", "paid")
+    pesapal = PesapalService()
+    status_data = await pesapal.get_transaction_status(order_tracking_id)
 
-        if project_id:
-            result = await db.execute(
-                select(Payment).where(
-                    Payment.gateway == PaymentGateway.stripe,
-                    Payment.gateway_payment_id == session_id,
-                )
-            )
-            payment = result.scalar_one_or_none()
-            if payment:
-                payment.status = PaymentStatus.completed if payment_status == "paid" else PaymentStatus.failed
-                payment.gateway_status = payment_status
-                payment.paid_at = datetime.now(timezone.utc)
+    if "error" in status_data:
+        logger.error("PesaPal IPN status check failed for %s", order_tracking_id)
+        return {"status": 500}
 
-                project = await db.get(Project, project_id)
-                if project and payment_status == "paid":
-                    project.status = ProjectStatus.paid
+    status_code = status_data.get("status_code")
+    status_description = status_data.get("payment_status_description", "").upper()
 
-                await db.commit()
-                logger.info("Stripe payment completed: session=%s project=%s", session_id, project_id)
+    result = await db.execute(
+        select(Payment).where(
+            Payment.gateway == PaymentGateway.pesapal,
+            Payment.gateway_payment_id == order_tracking_id,
+        )
+    )
+    payment = result.scalar_one_or_none()
 
-    return {"status": "received"}
+    if not payment:
+        logger.warning("PesaPal IPN for unknown payment: %s", order_tracking_id)
+        return {"status": 200}
+
+    if status_code == 1 or status_description == "COMPLETED":
+        payment.status = PaymentStatus.completed
+        payment.gateway_status = "completed"
+        payment.paid_at = datetime.now(timezone.utc)
+        payment.receipt_url = status_data.get("confirmation_code", "")
+
+        project = await db.get(Project, payment.project_id)
+        if project:
+            project.status = ProjectStatus.paid
+    elif status_code == 2 or status_description == "FAILED":
+        payment.status = PaymentStatus.failed
+        payment.gateway_status = f"failed: {status_data.get('description', '')}"
+    elif status_description == "REVERSED":
+        payment.status = PaymentStatus.refunded
+        payment.gateway_status = "reversed"
+    else:
+        payment.gateway_status = status_description
+
+    await db.commit()
+    logger.info("PesaPal payment updated: %s -> %s", order_tracking_id, payment.status.value)
+
+    return {"status": 200}
 
 
 @router.post("/mpesa")
