@@ -67,7 +67,7 @@ async def create_pesapal_order(request: Request, body: PesapalRequest, db: Async
 
         logger.info("PesaPal submit_order result: %s", result)
 
-        if "error" in result:
+        if result.get("error"):
             raise HTTPException(status_code=502, detail=result["error"])
 
         payment = Payment(
