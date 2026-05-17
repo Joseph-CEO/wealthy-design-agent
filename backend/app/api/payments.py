@@ -113,6 +113,8 @@ async def mpesa_stk_push(request: Request, body: MpesaRequest, db: AsyncSession 
         phone = phone[1:]
     if not phone.startswith("254") or len(phone) != 12:
         raise HTTPException(status_code=400, detail="Invalid phone number. Use format: 0712345678 or +254712345678")
+    if settings.mpesa_environment == "sandbox" and phone != "254708374149":
+        raise HTTPException(status_code=400, detail="Sandbox mode only allows test number 254708374149")
 
     result = await mpesa.stk_push(
         phone_number=phone,
