@@ -29,4 +29,25 @@ async def debug_pesapal():
         token = await p._get_token()
         result["token_obtained"] = token is not None
         result["token_prefix"] = token[:20] if token else None
+        if token:
+            ipn_id = settings.pesapal_ipn_id
+            if not ipn_id:
+                ipn_id = await p.register_ipn(
+                    ipn_url="https://api-production-8de3.up.railway.app/api/v1/webhooks/pesapal"
+                )
+            result["ipn_id"] = ipn_id
+            if ipn_id:
+                order = await p.submit_order(
+                    project_id=0,
+                    amount=1,
+                    currency="KES",
+                    description="Debug Test",
+                    client_email="debug@test.com",
+                    client_phone="254708374149",
+                    client_first_name="Debug",
+                    client_last_name="Test",
+                    callback_url="https://wealthboxagency.vercel.app/payment/success",
+                    notification_id=ipn_id,
+                )
+                result["submit_order"] = {k: v for k, v in order.items() if k != "raw"}
     return result
