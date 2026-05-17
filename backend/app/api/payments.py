@@ -32,55 +32,63 @@ class MpesaRequest(BaseModel):
 @router.post("/create-pesapal-order")
 @limiter.limit("20/minute")
 async def create_pesapal_order(request: Request, body: PesapalRequest, db: AsyncSession = Depends(get_db)):
-    project = await db.get(Project, body.project_id)
-    if not project:
-        raise HTTPException(status_code=404, detail="Project not found")
-    if not project.quote_amount or project.quote_amount <= 0:
-        raise HTTPException(status_code=400, detail="Project has no quote amount set")
+    try:
+        project = await db.get(Project, body.project_id)
+        if not project:
+            raise HTTPException(status_code=404, detail="Project not found")
+        if not project.quote_amount or project.quote_amount <= 0:
+            raise HTTPException(status_code=400, detail="Project has no quote amount set")
 
-    pesapal = PesapalService()
-    if not pesapal.enabled:
-        raise HTTPException(status_code=503, detail="PesaPal is not configured")
+        pesapal = PesapalService()
+        if not pesapal.enabled:
+            raise HTTPException(status_code=503, detail="PesaPal is not configured")
 
-    ipn_id = settings.pesapal_ipn_id
-    if not ipn_id:
-        ipn_id = await pesapal.register_ipn(
-            ipn_url="https://api-production-8de3.up.railway.app/api/v1/webhooks/pesapal"
-        )
+        ipn_id = settings.pesapal_ipn_id
         if not ipn_id:
-            raise HTTPException(status_code=503, detail="Failed to register PesaPal IPN URL")
+            ipn_id = await pesapal.register_ipn(
+                ipn_url="https://api-production-8de3.up.railway.app/api/v1/webhooks/pesapal"
+            )
+            if not ipn_id:
+                raise HTTPException(status_code=503, detail="Failed to register PesaPal IPN URL")
 
-    callback_url = f"{settings.frontend_url.rstrip('/')}/payment/success?order_tracking_id="
-    result = await pesapal.submit_order(
-        project_id=project.id,
-        amount=project.quote_amount,
-        currency=project.currency if project.currency in ("KES", "USD", "EUR", "GBP") else "KES",
-        description=f"Design Project #{project.id}",
-        client_email=project.client_email or "",
-        client_phone=body.client_phone,
-        client_first_name=body.client_first_name,
-        client_last_name=body.client_last_name,
-        callback_url=callback_url,
-        notification_id=ipn_id,
-    )
+        callback_url = f"{settings.frontend_url.rstrip('/')}/payment/success?order_tracking_id="
+        result = await pesapal.submit_order(
+            project_id=project.id,
+            amount=project.quote_amount,
+            currency=project.currency if project.currency in ("KES", "USD", "EUR", "GBP") else "KES",
+            description=f"Design Project #{project.id}",
+            client_email=project.client_email or "",
+            client_phone=body.client_phone,
+            client_first_name=body.client_first_name,
+            client_last_name=body.client_last_name,
+            callback_url=callback_url,
+            notification_id=ipn_id,
+        )
 
-    if "error" in result:
-        raise HTTPException(status_code=502, detail=result["error"])
+        logger.info("PesaPal submit_order result: %s", result)
 
-    payment = Payment(
-        project_id=project.id,
-        amount=project.quote_amount,
-        currency=project.currency,
-        gateway=PaymentGateway.pesapal,
-        gateway_payment_id=result.get("order_tracking_id"),
-        gateway_status="pending",
-        status=PaymentStatus.pending,
-        client_email=project.client_email,
-    )
-    db.add(payment)
-    await db.commit()
+        if "error" in result:
+            raise HTTPException(status_code=502, detail=result["error"])
 
-    return result
+        payment = Payment(
+            project_id=project.id,
+            amount=project.quote_amount,
+            currency=project.currency,
+            gateway=PaymentGateway.pesapal,
+            gateway_payment_id=result.get("order_tracking_id"),
+            gateway_status="pending",
+            status=PaymentStatus.pending,
+            client_email=project.client_email,
+        )
+        db.add(payment)
+        await db.commit()
+
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("PesaPal order failed: %s", e, exc_info=True)
+        raise HTTPException(status_code=502, detail=str(e))
 
 
 @router.post("/mpesa-stk-push")
