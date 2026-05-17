@@ -28,7 +28,7 @@ class PesapalService:
         if not self.enabled:
             return None
 
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(timeout=30) as client:
             try:
                 resp = await client.post(
                     f"{self.base_url}/api/Auth/RequestToken",
@@ -37,7 +37,6 @@ class PesapalService:
                         "consumer_secret": settings.pesapal_consumer_secret,
                     },
                     headers={"Accept": "application/json", "Content-Type": "application/json"},
-                    timeout=10,
                 )
                 resp.raise_for_status()
                 data = resp.json()
@@ -93,7 +92,7 @@ class PesapalService:
 
         merchant_reference = f"PROJ-{project_id}"
 
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(timeout=30) as client:
             try:
                 resp = await client.post(
                     f"{self.base_url}/api/Transactions/SubmitOrderRequest",
@@ -145,7 +144,7 @@ class PesapalService:
         if not token:
             return {"error": "Payment service authentication failed"}
 
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(timeout=30) as client:
             try:
                 resp = await client.get(
                     f"{self.base_url}/api/Transactions/GetTransactionStatus",
